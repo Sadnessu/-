@@ -1,0 +1,2060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartHome Hub - 多模态智能家居中控</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-accent: #0f3460;
+            --highlight: #e94560;
+            --text-primary: #eaeaea;
+            --text-secondary: #a0a0a0;
+            --status-online: #00d9ff;
+            --status-offline: #4a4a6a;
+            --status-alert: #ff4757;
+            --status-eco: #2ed573;
+            --card-radius: 12px;
+            --btn-radius: 8px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-secondary);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--status-online);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--status-online);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .weather-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .weather-icon {
+            font-size: 20px;
+        }
+
+        .datetime {
+            text-align: right;
+        }
+
+        .time {
+            font-family: "Roboto Mono", monospace;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Container */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 53px);
+        }
+
+        /* Left Panel - Vision */
+        .vision-panel {
+            width: 30%;
+            min-width: 300px;
+            background: var(--bg-secondary);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .camera-feed {
+            position: relative;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1a2a 100%);
+            border-radius: var(--card-radius);
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .camera-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .camera-placeholder svg {
+            width: 48px;
+            height: 48px;
+            opacity: 0.5;
+            margin-bottom: 8px;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+        }
+
+        .camera-name {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--status-online);
+        }
+
+        .rec-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--status-alert);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .camera-controls {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .camera-btn {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: var(--btn-radius);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .camera-btn:hover {
+            background: var(--highlight);
+        }
+
+        .camera-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .camera-selector {
+            background: var(--bg-accent);
+            border-radius: var(--btn-radius);
+            padding: 12px;
+        }
+
+        .camera-selector select {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: var(--btn-radius);
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .camera-selector select:focus {
+            border-color: var(--status-online);
+        }
+
+        .motion-detection {
+            background: var(--bg-accent);
+            border-radius: var(--card-radius);
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .motion-label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .motion-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--status-offline);
+            transition: var(--transition);
+        }
+
+        .motion-indicator.active {
+            background: var(--status-alert);
+            box-shadow: 0 0 10px var(--status-alert);
+        }
+
+        .motion-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: "Roboto Mono", monospace;
+        }
+
+        /* Right Panel - Control Center */
+        .control-panel {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Voice Interaction */
+        .voice-section {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .voice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .voice-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .voice-icon.listening {
+            background: var(--status-online);
+            animation: voicePulse 1.5s infinite;
+        }
+
+        .voice-icon.processing {
+            background: var(--highlight);
+        }
+
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(0, 217, 255, 0); }
+        }
+
+        .voice-icon svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-primary);
+        }
+
+        .voice-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .voice-text.active {
+            color: var(--status-online);
+        }
+
+        .voice-wave {
+            display: flex;
+            gap: 3px;
+            height: 30px;
+            align-items: center;
+        }
+
+        .wave-bar {
+            width: 4px;
+            height: 8px;
+            background: var(--status-online);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        .voice-input-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .voice-input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--btn-radius);
+            padding: 14px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .voice-input:focus {
+            border-color: var(--status-online);
+        }
+
+        .voice-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .voice-send-btn {
+            background: var(--highlight);
+            border: none;
+            color: var(--text-primary);
+            padding: 14px 20px;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .voice-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .voice-send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .voice-examples {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .voice-example {
+            background: var(--bg-accent);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .voice-example:hover {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        .voice-history {
+            margin-top: 16px;
+            max-height: 150px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .voice-message {
+            padding: 10px 14px;
+            border-radius: var(--btn-radius);
+            font-size: 13px;
+            max-width: 85%;
+        }
+
+        .voice-message.user {
+            background: var(--bg-accent);
+            align-self: flex-end;
+        }
+
+        .voice-message.system {
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            align-self: flex-start;
+        }
+
+        /* Device Control Grid */
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .device-card {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .device-card:hover {
+            border-color: var(--status-online);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);
+        }
+
+        .device-card.alert {
+            border-color: var(--status-alert);
+            animation: alertPulse 2s infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 71, 87, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 71, 87, 0.6); }
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .device-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--btn-radius);
+            background: var(--bg-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .device-icon.active {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        .device-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .device-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .device-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .device-toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--status-offline);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .device-toggle.active {
+            background: var(--status-online);
+        }
+
+        .device-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .device-toggle.active::after {
+            left: 27px;
+        }
+
+        /* Light Controls */
+        .light-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .brightness-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brightness-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 40px;
+        }
+
+        .brightness-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: var(--bg-accent);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .brightness-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--status-online);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .brightness-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .brightness-value {
+            font-family: "Roboto Mono", monospace;
+            font-size: 13px;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .color-presets {
+            display: flex;
+            gap: 8px;
+        }
+
+        .color-preset {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .color-preset:hover {
+            transform: scale(1.15);
+        }
+
+        .color-preset.active {
+            border-color: var(--text-primary);
+        }
+
+        .light-scenes {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .light-scene {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-accent);
+            border: none;
+            border-radius: var(--btn-radius);
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .light-scene:hover {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        .light-scene.active {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        /* AC Controls */
+        .ac-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .temp-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .temp-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-accent);
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .temp-btn:hover {
+            background: var(--status-online);
+        }
+
+        .temp-display {
+            text-align: center;
+        }
+
+        .temp-value {
+            font-family: "Roboto Mono", monospace;
+            font-size: 36px;
+            font-weight: 300;
+        }
+
+        .temp-unit {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .ac-modes {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ac-mode {
+            flex: 1;
+            padding: 10px 8px;
+            background: var(--bg-accent);
+            border: none;
+            border-radius: var(--btn-radius);
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ac-mode svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .ac-mode:hover {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        .ac-mode.active {
+            background: var(--status-online);
+            color: var(--bg-primary);
+        }
+
+        .fan-speed {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fan-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .fan-bars {
+            display: flex;
+            gap: 4px;
+        }
+
+        .fan-bar {
+            width: 8px;
+            height: 20px;
+            background: var(--bg-accent);
+            border-radius: 2px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .fan-bar.active {
+            background: var(--status-online);
+        }
+
+        /* Curtain Controls */
+        .curtain-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .curtain-position {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .curtain-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .curtain-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(to right, var(--status-online), var(--bg-accent));
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .curtain-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .curtain-value {
+            font-family: "Roboto Mono", monospace;
+            font-size: 14px;
+            min-width: 45px;
+            text-align: right;
+        }
+
+        .curtain-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .curtain-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg-accent);
+            border: none;
+            border-radius: var(--btn-radius);
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .curtain-btn:hover {
+            background: var(--status-online);
+        }
+
+        .curtain-btn.active {
+            background: var(--highlight);
+        }
+
+        /* Security Controls */
+        .security-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .security-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-accent);
+            border-radius: var(--btn-radius);
+        }
+
+        .security-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .security-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--btn-radius);
+            background: var(--status-offline);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .security-icon.armed {
+            background: var(--status-alert);
+        }
+
+        .security-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .security-text {
+            font-size: 14px;
+        }
+
+        .security-btn {
+            padding: 10px 20px;
+            background: var(--status-offline);
+            border: none;
+            border-radius: var(--btn-radius);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .security-btn.armed {
+            background: var(--status-alert);
+        }
+
+        .security-btn:hover {
+            opacity: 0.9;
+        }
+
+        .sensors-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sensor-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-accent);
+            border-radius: var(--btn-radius);
+            font-size: 13px;
+        }
+
+        .sensor-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sensor-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .sensor-dot.secure {
+            background: var(--status-eco);
+        }
+
+        .sensor-dot.warning {
+            background: var(--status-alert);
+        }
+
+        /* Scene Cards */
+        .scenes-section {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .scenes-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .scene-card {
+            background: var(--bg-accent);
+            border-radius: var(--card-radius);
+            padding: 20px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .scene-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--status-online);
+            box-shadow: 0 8px 25px rgba(0, 217, 255, 0.2);
+        }
+
+        .scene-card.active {
+            border-color: var(--highlight);
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        .scene-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .scene-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .scene-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Logs Section */
+        .logs-section {
+            background: var(--bg-secondary);
+            border-radius: var(--card-radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            max-height: 200px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .logs-clear {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .logs-clear:hover {
+            color: var(--highlight);
+        }
+
+        .logs-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: var(--bg-accent);
+            border-radius: var(--btn-radius);
+            font-size: 13px;
+        }
+
+        .log-time {
+            font-family: "Roboto Mono", monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            min-width: 60px;
+        }
+
+        .log-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .log-message {
+            flex: 1;
+            color: var(--text-secondary);
+        }
+
+        .log-message strong {
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            .scenes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .vision-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .scenes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-accent);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--status-online);
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <header class="status-bar">
+        <div class="status-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                SmartHome Hub
+            </div>
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span>系统在线</span>
+            </div>
+        </div>
+        <div class="status-right">
+            <div class="weather-info">
+                <span class="weather-icon">☀️</span>
+                <span id="weather-temp">26°C</span>
+                <span style="color: var(--text-secondary)">晴</span>
+            </div>
+            <div class="datetime">
+                <div class="time" id="current-time">00:00</div>
+                <div class="date" id="current-date">2026年4月30日 周四</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Vision Panel -->
+        <aside class="vision-panel">
+            <div>
+                <div class="panel-title">视觉监控</div>
+                <div class="camera-feed">
+                    <div class="camera-overlay">
+                        <div>
+                            <div class="camera-name" id="camera-name">客厅摄像头</div>
+                            <div class="camera-status">
+                                <span class="rec-indicator"></span>
+                                <span>实时监控</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="camera-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M23 7l-7 5 7 5V7z"/>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                        </svg>
+                        <div>摄像头画面</div>
+                    </div>
+                    <div class="camera-controls">
+                        <button class="camera-btn" onclick="captureScreenshot()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            截图
+                        </button>
+                        <button class="camera-btn" onclick="toggleFullscreen()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 3 21 3 21 9"/>
+                                <polyline points="9 21 3 21 3 15"/>
+                                <line x1="21" y1="3" x2="14" y2="10"/>
+                                <line x1="3" y1="21" x2="10" y2="14"/>
+                            </svg>
+                            全屏
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-selector">
+                <select id="camera-select" onchange="switchCamera()">
+                    <option value="living">客厅摄像头</option>
+                    <option value="bedroom">卧室摄像头</option>
+                    <option value="entrance">门口摄像头</option>
+                    <option value="garden">庭院摄像头</option>
+                </select>
+            </div>
+
+            <div>
+                <div class="motion-detection">
+                    <div class="motion-label">
+                        <span class="motion-indicator" id="motion-indicator"></span>
+                        <span>运动检测</span>
+                    </div>
+                    <div class="motion-time" id="motion-time">--:--:--</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Control Panel -->
+        <main class="control-panel">
+            <!-- Voice Interaction -->
+            <section class="voice-section">
+                <div class="voice-header">
+                    <div class="voice-status">
+                        <div class="voice-icon" id="voice-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                                <line x1="8" y1="23" x2="16" y2="23"/>
+                            </svg>
+                        </div>
+                        <span class="voice-text" id="voice-text">语音助手待机中</span>
+                    </div>
+                    <div class="voice-wave" id="voice-wave" style="display: none;">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                </div>
+                <div class="voice-input-container">
+                    <input type="text" class="voice-input" id="voice-input" placeholder="输入语音命令或文字...">
+                    <button class="voice-send-btn" onclick="sendCommand()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                        发送
+                    </button>
+                </div>
+                <div class="voice-examples">
+                    <span class="voice-example" onclick="quickCommand('打开客厅灯')">打开客厅灯</span>
+                    <span class="voice-example" onclick="quickCommand('空调调至24度')">空调调至24度</span>
+                    <span class="voice-example" onclick="quickCommand('打开窗帘')">打开窗帘</span>
+                    <span class="voice-example" onclick="quickCommand('启动离家模式')">启动离家模式</span>
+                    <span class="voice-example" onclick="quickCommand('现在几点了')">现在几点了</span>
+                </div>
+                <div class="voice-history" id="voice-history"></div>
+            </section>
+
+            <!-- Device Control -->
+            <div class="devices-grid">
+                <!-- Light Control -->
+                <div class="device-card" id="light-card">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon" id="light-icon">💡</div>
+                            <div>
+                                <div class="device-name">客厅灯光</div>
+                                <div class="device-status" id="light-status">已关闭</div>
+                            </div>
+                        </div>
+                        <div class="device-toggle" id="light-toggle" onclick="toggleLight()"></div>
+                    </div>
+                    <div class="light-controls">
+                        <div class="brightness-control">
+                            <span class="brightness-label">亮度</span>
+                            <input type="range" class="brightness-slider" id="brightness-slider" min="0" max="100" value="80" oninput="setBrightness(this.value)">
+                            <span class="brightness-value" id="brightness-value">80%</span>
+                        </div>
+                        <div class="color-presets">
+                            <div class="color-preset active" style="background: #fff5e6;" onclick="setLightColor('#fff5e6', this)"></div>
+                            <div class="color-preset" style="background: #ffeaa7;" onclick="setLightColor('#ffeaa7', this)"></div>
+                            <div class="color-preset" style="background: #74b9ff;" onclick="setLightColor('#74b9ff', this)"></div>
+                            <div class="color-preset" style="background: #fd79a8;" onclick="setLightColor('#fd79a8', this)"></div>
+                            <div class="color-preset" style="background: #a29bfe;" onclick="setLightColor('#a29bfe', this)"></div>
+                        </div>
+                        <div class="light-scenes">
+                            <button class="light-scene" onclick="setLightScene('reading')">阅读</button>
+                            <button class="light-scene" onclick="setLightScene('movie')">影院</button>
+                            <button class="light-scene" onclick="setLightScene('sleep')">睡眠</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AC Control -->
+                <div class="device-card" id="ac-card">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon" id="ac-icon">❄️</div>
+                            <div>
+                                <div class="device-name">空调控制</div>
+                                <div class="device-status" id="ac-status">已关闭</div>
+                            </div>
+                        </div>
+                        <div class="device-toggle" id="ac-toggle" onclick="toggleAC()"></div>
+                    </div>
+                    <div class="ac-controls">
+                        <div class="temp-control">
+                            <button class="temp-btn" onclick="adjustTemp(-1)">−</button>
+                            <div class="temp-display">
+                                <span class="temp-value" id="temp-value">24</span>
+                                <span class="temp-unit">°C</span>
+                            </div>
+                            <button class="temp-btn" onclick="adjustTemp(1)">+</button>
+                        </div>
+                        <div class="ac-modes">
+                            <button class="ac-mode active" id="mode-cool" onclick="setACMode('cool')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+                                </svg>
+                                制冷
+                            </button>
+                            <button class="ac-mode" id="mode-heat" onclick="setACMode('heat')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2c-1.7 3.3-3 5.3-3 8a3 3 0 0 0 6 0c0-2.7-1.3-4.7-3-8z"/>
+                                    <path d="M12 22v-3"/>
+                                </svg>
+                                制热
+                            </button>
+                            <button class="ac-mode" id="mode-fan" onclick="setACMode('fan')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>
+                                </svg>
+                                送风
+                            </button>
+                            <button class="ac-mode" id="mode-auto" onclick="setACMode('auto')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                自动
+                            </button>
+                        </div>
+                        <div class="fan-speed">
+                            <span class="fan-label">风速</span>
+                            <div class="fan-bars">
+                                <div class="fan-bar active" onclick="setFanSpeed(1)"></div>
+                                <div class="fan-bar" onclick="setFanSpeed(2)"></div>
+                                <div class="fan-bar" onclick="setFanSpeed(3)"></div>
+                                <div class="fan-bar" onclick="setFanSpeed(4)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Curtain Control -->
+                <div class="device-card" id="curtain-card">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon" id="curtain-icon">🪟</div>
+                            <div>
+                                <div class="device-name">智能窗帘</div>
+                                <div class="device-status" id="curtain-status">已关闭</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="curtain-controls">
+                        <div class="curtain-position">
+                            <span class="curtain-label">开合度</span>
+                            <input type="range" class="curtain-slider" id="curtain-slider" min="0" max="100" value="0" oninput="setCurtainPosition(this.value)">
+                            <span class="curtain-value" id="curtain-value">0%</span>
+                        </div>
+                        <div class="curtain-buttons">
+                            <button class="curtain-btn" onclick="setCurtainPosition(0)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M18 15l-6-6-6 6"/>
+                                </svg>
+                                关闭
+                            </button>
+                            <button class="curtain-btn" onclick="setCurtainPosition(100)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M6 9l6 6 6-6"/>
+                                </svg>
+                                打开
+                            </button>
+                            <button class="curtain-btn" onclick="stopCurtain()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <rect x="6" y="6" width="12" height="12"/>
+                                </svg>
+                                暂停
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Control -->
+                <div class="device-card" id="security-card">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon" id="security-icon">🔒</div>
+                            <div>
+                                <div class="device-name">安防系统</div>
+                                <div class="device-status" id="security-status">已撤防</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="security-controls">
+                        <div class="security-toggle">
+                            <div class="security-label">
+                                <div class="security-icon" id="security-icon-btn">🔓</div>
+                                <span class="security-text" id="security-mode-text">撤防模式</span>
+                            </div>
+                            <button class="security-btn" id="security-btn" onclick="toggleSecurity()">
+                                布防
+                            </button>
+                        </div>
+                        <div class="sensors-list">
+                            <div class="sensor-item">
+                                <span>🚪 入户门</span>
+                                <div class="sensor-status">
+                                    <span class="sensor-dot secure"></span>
+                                    <span>关闭</span>
+                                </div>
+                            </div>
+                            <div class="sensor-item">
+                                <span>🪟 客厅窗户</span>
+                                <div class="sensor-status">
+                                    <span class="sensor-dot secure"></span>
+                                    <span>关闭</span>
+                                </div>
+                            </div>
+                            <div class="sensor-item" id="motion-sensor">
+                                <span>📡 红外感应</span>
+                                <div class="sensor-status">
+                                    <span class="sensor-dot" id="motion-dot"></span>
+                                    <span id="motion-text">无异常</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenes Section -->
+            <section class="scenes-section">
+                <div class="panel-title">快捷场景</div>
+                <div class="scenes-grid">
+                    <div class="scene-card" id="scene-leave" onclick="activateScene('leave')">
+                        <div class="scene-icon">🚪</div>
+                        <div class="scene-name">离家模式</div>
+                        <div class="scene-status">关闭所有设备</div>
+                    </div>
+                    <div class="scene-card" id="scene-home" onclick="activateScene('home')">
+                        <div class="scene-icon">🏠</div>
+                        <div class="scene-name">回家模式</div>
+                        <div class="scene-status">开启基础设备</div>
+                    </div>
+                    <div class="scene-card" id="scene-sleep" onclick="activateScene('sleep')">
+                        <div class="scene-icon">😴</div>
+                        <div class="scene-name">睡眠模式</div>
+                        <div class="scene-status">调暗灯光</div>
+                    </div>
+                    <div class="scene-card" id="scene-movie" onclick="activateScene('movie')">
+                        <div class="scene-icon">🎬</div>
+                        <div class="scene-name">影院模式</div>
+                        <div class="scene-status">氛围灯光</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs Section -->
+            <section class="logs-section">
+                <div class="logs-header">
+                    <div class="panel-title" style="margin-bottom: 0;">操作日志</div>
+                    <button class="logs-clear" onclick="clearLogs()">清空日志</button>
+                </div>
+                <div class="logs-list" id="logs-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // ==================== State Management ====================
+        const state = {
+            light: {
+                on: false,
+                brightness: 80,
+                color: '#fff5e6'
+            },
+            ac: {
+                on: false,
+                temperature: 24,
+                mode: 'cool',
+                fanSpeed: 1
+            },
+            curtain: {
+                position: 0,
+                moving: false
+            },
+            security: {
+                armed: false,
+                motionDetected: false
+            },
+            activeScene: null,
+            logs: []
+        };
+
+        // ==================== Time & Weather ====================
+        function updateDateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+            
+            document.getElementById('current-time').textContent = timeStr;
+            document.getElementById('current-date').textContent = dateStr;
+        }
+
+        function updateWeather() {
+            const temps = ['24°C', '25°C', '26°C', '27°C'];
+            const conditions = ['☀️ 晴', '⛅ 多云', '🌤️ 晴转多云'];
+            document.getElementById('weather-temp').textContent = temps[Math.floor(Math.random() * temps.length)];
+        }
+
+        setInterval(updateDateTime, 1000);
+        setInterval(updateWeather, 60000);
+        updateDateTime();
+        updateWeather();
+
+        // ==================== Motion Detection Simulation ====================
+        function simulateMotion() {
+            if (state.security.armed && Math.random() > 0.7) {
+                state.security.motionDetected = true;
+                const indicator = document.getElementById('motion-indicator');
+                const motionDot = document.getElementById('motion-dot');
+                const motionText = document.getElementById('motion-text');
+                const motionTime = document.getElementById('motion-time');
+                
+                indicator.classList.add('active');
+                motionDot.classList.add('warning');
+                motionText.textContent = '检测到移动';
+                motionTime.textContent = new Date().toLocaleTimeString('zh-CN');
+                
+                const securityCard = document.getElementById('security-card');
+                securityCard.classList.add('alert');
+                
+                addLog('motion', '检测到异常移动，已触发告警');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('active');
+                    motionDot.classList.remove('warning');
+                    motionText.textContent = '无异常';
+                    securityCard.classList.remove('alert');
+                    state.security.motionDetected = false;
+                }, 5000);
+            }
+        }
+
+        setInterval(simulateMotion, 8000);
+
+        // ==================== Light Control ====================
+        function toggleLight() {
+            state.light.on = !state.light.on;
+            updateLightUI();
+            addLog('light', state.light.on ? '打开客厅灯光' : '关闭客厅灯光');
+        }
+
+        function setBrightness(value) {
+            state.light.brightness = parseInt(value);
+            document.getElementById('brightness-value').textContent = value + '%';
+            if (state.light.on) {
+                addLog('light', `调整灯光亮度至 ${value}%`);
+            }
+        }
+
+        function setLightColor(color, element) {
+            state.light.color = color;
+            document.querySelectorAll('.color-preset').forEach(p => p.classList.remove('active'));
+            element.classList.add('active');
+            if (state.light.on) {
+                addLog('light', '切换灯光颜色');
+            }
+        }
+
+        function setLightScene(scene) {
+            const scenes = {
+                reading: { brightness: 100, color: '#ffffff' },
+                movie: { brightness: 20, color: '#74b9ff' },
+                sleep: { brightness: 10, color: '#fd79a8' }
+            };
+            
+            if (scenes[scene]) {
+                state.light.on = true;
+                state.light.brightness = scenes[scene].brightness;
+                state.light.color = scenes[scene].color;
+                updateLightUI();
+                
+                document.querySelectorAll('.light-scene').forEach(s => s.classList.remove('active'));
+                event.target.classList.add('active');
+                
+                addLog('light', `切换至${scene === 'reading' ? '阅读' : scene === 'movie' ? '影院' : '睡眠'}场景`);
+            }
+        }
+
+        function updateLightUI() {
+            const toggle = document.getElementById('light-toggle');
+            const icon = document.getElementById('light-icon');
+            const status = document.getElementById('light-status');
+            const slider = document.getElementById('brightness-slider');
+            
+            toggle.classList.toggle('active', state.light.on);
+            icon.classList.toggle('active', state.light.on);
+            status.textContent = state.light.on ? `亮度 ${state.light.brightness}%` : '已关闭';
+            
+            if (!state.light.on) {
+                status.textContent = '已关闭';
+            }
+        }
+
+        // ==================== AC Control ====================
+        function toggleAC() {
+            state.ac.on = !state.ac.on;
+            updateACUI();
+            addLog('ac', state.ac.on ? `打开空调，${state.ac.temperature}°C` : '关闭空调');
+        }
+
+        function adjustTemp(delta) {
+            const newTemp = state.ac.temperature + delta;
+            if (newTemp >= 16 && newTemp <= 30) {
+                state.ac.temperature = newTemp;
+                document.getElementById('temp-value').textContent = newTemp;
+                if (state.ac.on) {
+                    addLog('ac', `调整温度至 ${newTemp}°C`);
+                }
+            }
+        }
+
+        function setACMode(mode) {
+            state.ac.mode = mode;
+            const modes = ['cool', 'heat', 'fan', 'auto'];
+            modes.forEach(m => {
+                document.getElementById('mode-' + m).classList.toggle('active', m === mode);
+            });
+            
+            const modeNames = { cool: '制冷', heat: '制热', fan: '送风', auto: '自动' };
+            if (state.ac.on) {
+                addLog('ac', `切换至${modeNames[mode]}模式`);
+            }
+        }
+
+        function setFanSpeed(speed) {
+            state.ac.fanSpeed = speed;
+            const bars = document.querySelectorAll('.fan-bar');
+            bars.forEach((bar, index) => {
+                bar.classList.toggle('active', index < speed);
+            });
+            if (state.ac.on) {
+                addLog('ac', `调整风速至 ${speed}档`);
+            }
+        }
+
+        function updateACUI() {
+            const toggle = document.getElementById('ac-toggle');
+            const icon = document.getElementById('ac-icon');
+            const status = document.getElementById('ac-status');
+            
+            toggle.classList.toggle('active', state.ac.on);
+            icon.classList.toggle('active', state.ac.on);
+            icon.textContent = state.ac.mode === 'heat' ? '🔥' : '❄️';
+            status.textContent = state.ac.on ? `${state.ac.temperature}°C · ${state.ac.mode === 'cool' ? '制冷' : state.ac.mode === 'heat' ? '制热' : state.ac.mode === 'fan' ? '送风' : '自动'}` : '已关闭';
+        }
+
+        // ==================== Curtain Control ====================
+        function setCurtainPosition(value) {
+            state.curtain.position = parseInt(value);
+            document.getElementById('curtain-slider').value = value;
+            document.getElementById('curtain-value').textContent = value + '%';
+            
+            const status = document.getElementById('curtain-status');
+            const icon = document.getElementById('curtain-icon');
+            
+            if (value === 0) {
+                status.textContent = '已关闭';
+                icon.textContent = '🪟';
+            } else if (value === 100) {
+                status.textContent = '已完全打开';
+                icon.textContent = '🌤️';
+            } else {
+                status.textContent = `已打开 ${value}%`;
+                icon.textContent = '🪟';
+            }
+            
+            addLog('curtain', `窗帘调整至 ${value}%`);
+        }
+
+        function stopCurtain() {
+            addLog('curtain', '窗帘已暂停');
+        }
+
+        // ==================== Security Control ====================
+        function toggleSecurity() {
+            state.security.armed = !state.security.armed;
+            updateSecurityUI();
+            addLog('security', state.security.armed ? '安防系统已布防' : '安防系统已撤防');
+        }
+
+        function updateSecurityUI() {
+            const btn = document.getElementById('security-btn');
+            const iconBtn = document.getElementById('security-icon-btn');
+            const status = document.getElementById('security-status');
+            const modeText = document.getElementById('security-mode-text');
+            const icon = document.getElementById('security-icon');
+            
+            btn.classList.toggle('armed', state.security.armed);
+            btn.textContent = state.security.armed ? '撤防' : '布防';
+            iconBtn.classList.toggle('armed', state.security.armed);
+            iconBtn.textContent = state.security.armed ? '🔒' : '🔓';
+            status.textContent = state.security.armed ? '已布防' : '已撤防';
+            modeText.textContent = state.security.armed ? '布防模式' : '撤防模式';
+            icon.textContent = state.security.armed ? '🛡️' : '🔒';
+        }
+
+        // ==================== Scene Activation ====================
+        function activateScene(scene) {
+            document.querySelectorAll('.scene-card').forEach(s => s.classList.remove('active'));
+            document.getElementById('scene-' + scene).classList.add('active');
+            
+            switch(scene) {
+                case 'leave':
+                    state.light.on = false;
+                    state.ac.on = false;
+                    state.curtain.position = 0;
+                    state.security.armed = true;
+                    addLog('scene', '启动离家模式');
+                    break;
+                case 'home':
+                    state.light.on = true;
+                    state.light.brightness = 80;
+                    state.ac.on = true;
+                    state.ac.temperature = 24;
+                    state.curtain.position = 50;
+                    state.security.armed = false;
+                    addLog('scene', '启动回家模式');
+                    break;
+                case 'sleep':
+                    state.light.on = true;
+                    state.light.brightness = 10;
+                    state.ac.on = true;
+                    state.ac.temperature = 26;
+                    state.ac.mode = 'cool';
+                    state.curtain.position = 0;
+                    addLog('scene', '启动睡眠模式');
+                    break;
+                case 'movie':
+                    state.light.on = true;
+                    state.light.brightness = 20;
+                    state.light.color = '#74b9ff';
+                    state.curtain.position = 100;
+                    addLog('scene', '启动影院模式');
+                    break;
+            }
+            
+            updateLightUI();
+            updateACUI();
+            setCurtainPosition(state.curtain.position);
+            updateSecurityUI();
+            document.getElementById('brightness-slider').value = state.light.brightness;
+            document.getElementById('brightness-value').textContent = state.light.brightness + '%';
+            document.getElementById('temp-value').textContent = state.ac.temperature;
+            
+            state.activeScene = scene;
+        }
+
+        // ==================== Voice Interaction ====================
+        function sendCommand() {
+            const input = document.getElementById('voice-input');
+            const command = input.value.trim();
+            if (command) {
+                processVoiceCommand(command);
+                input.value = '';
+            }
+        }
+
+        function quickCommand(command) {
+            processVoiceCommand(command);
+        }
+
+        function processVoiceCommand(command) {
+            // Show user message
+            addVoiceMessage(command, 'user');
+            
+            // Show listening animation
+            const icon = document.getElementById('voice-icon');
+            const text = document.getElementById('voice-text');
+            const wave = document.getElementById('voice-wave');
+            
+            icon.classList.add('listening');
+            text.classList.add('active');
+            text.textContent = '正在聆听...';
+            wave.style.display = 'flex';
+            
+            // Simulate voice processing
+            setTimeout(() => {
+                icon.classList.remove('listening');
+                icon.classList.add('processing');
+                text.textContent = '正在处理...';
+                
+                // Animate wave bars
+                animateWaveBars();
+                
+                setTimeout(() => {
+                    icon.classList.remove('processing');
+                    wave.style.display = 'none';
+                    text.classList.remove('active');
+                    text.textContent = '语音助手待机中';
+                    
+                    // Process command
+                    const response = parseCommand(command);
+                    addVoiceMessage(response, 'system');
+                    
+                    // Speak response
+                    speakResponse(response);
+                    
+                }, 1500);
+            }, 1000);
+        }
+
+        function animateWaveBars() {
+            const bars = document.querySelectorAll('.wave-bar');
+            bars.forEach((bar, i) => {
+                animateBar(bar, i);
+            });
+        }
+
+        function animateBar(bar, index) {
+            const heights = [8, 16, 24, 18, 12, 20, 10];
+            let count = 0;
+            const interval = setInterval(() => {
+                bar.style.height = heights[(count + index) % heights.length] + 'px';
+                count++;
+                if (count > 10) clearInterval(interval);
+            }, 150);
+        }
+
+        function parseCommand(command) {
+            const cmd = command.toLowerCase();
+            
+            // Light commands
+            if (cmd.includes('打开') && cmd.includes('灯')) {
+                state.light.on = true;
+                updateLightUI();
+                return '已打开客厅灯光';
+            }
+            if (cmd.includes('关闭') && cmd.includes('灯')) {
+                state.light.on = false;
+                updateLightUI();
+                return '已关闭客厅灯光';
+            }
+            if (cmd.includes('亮') || cmd.includes('调亮')) {
+                state.light.brightness = Math.min(100, state.light.brightness + 20);
+                document.getElementById('brightness-slider').value = state.light.brightness;
+                document.getElementById('brightness-value').textContent = state.light.brightness + '%';
+                updateLightUI();
+                return `灯光亮度已调至 ${state.light.brightness}%`;
+            }
+            
+            // AC commands
+            if (cmd.includes('打开') && cmd.includes('空调')) {
+                state.ac.on = true;
+                updateACUI();
+                return '已打开空调';
+            }
+            if (cmd.includes('关闭') && cmd.includes('空调')) {
+                state.ac.on = false;
+                updateACUI();
+                return '已关闭空调';
+            }
+            
+            const tempMatch = cmd.match(/(\d+)\s*度/);
+            if (tempMatch) {
+                const temp = parseInt(tempMatch[1]);
+                if (temp >= 16 && temp <= 30) {
+                    state.ac.temperature = temp;
+                    state.ac.on = true;
+                    document.getElementById('temp-value').textContent = temp;
+                    updateACUI();
+                    return `空调温度已设置为 ${temp} 度`;
+                }
+            }
+            
+            // Curtain commands
+            if (cmd.includes('打开') && cmd.includes('窗帘')) {
+                setCurtainPosition(100);
+                return '窗帘已打开';
+            }
+            if (cmd.includes('关闭') && cmd.includes('窗帘')) {
+                setCurtainPosition(0);
+                return '窗帘已关闭';
+            }
+            
+            // Scene commands
+            if (cmd.includes('离家')) {
+                activateScene('leave');
+                return '已启动离家模式';
+            }
+            if (cmd.includes('回家')) {
+                activateScene('home');
+                return '已启动回家模式';
+            }
+            if (cmd.includes('睡眠') || cmd.includes('睡觉')) {
+                activateScene('sleep');
+                return '已启动睡眠模式';
+            }
+            if (cmd.includes('影院') || cmd.includes('电影')) {
+                activateScene('movie');
+                return '已启动影院模式';
+            }
+            
+            // Time/Weather
+            if (cmd.includes('时间') || cmd.includes('几点')) {
+                const now = new Date();
+                return `现在是 ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            if (cmd.includes('天气')) {
+                return '今天天气晴朗，气温 26 度，适合外出';
+            }
+            
+            return '抱歉，我没有理解这个命令，请再说一次';
+        }
+
+        function speakResponse(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 1;
+                utterance.pitch = 1;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        function addVoiceMessage(text, type) {
+            const history = document.getElementById('voice-history');
+            const msg = document.createElement('div');
+            msg.className = `voice-message ${type}`;
+            msg.textContent = text;
+            history.appendChild(msg);
+            history.scrollTop = history.scrollHeight;
+            
+            // Limit history
+            while (history.children.length > 10) {
+                history.removeChild(history.firstChild);
+            }
+        }
+
+        // ==================== Camera Controls ====================
+        function captureScreenshot() {
+            addLog('camera', '已保存截图');
+            alert('截图已保存！');
+        }
+
+        function toggleFullscreen() {
+            const cameraFeed = document.querySelector('.camera-feed');
+            if (!document.fullscreenElement) {
+                cameraFeed.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function switchCamera() {
+            const select = document.getElementById('camera-select');
+            const name = document.getElementById('camera-name');
+            const names = {
+                living: '客厅摄像头',
+                bedroom: '卧室摄像头',
+                entrance: '门口摄像头',
+                garden: '庭院摄像头'
+            };
+            name.textContent = names[select.value] || '摄像头';
+            addLog('camera', `切换至${names[select.value]}`);
+        }
+
+        // ==================== Logs ====================
+        function addLog(type, message) {
+            const logs = document.getElementById('logs-list');
+            const log = document.createElement('div');
+            log.className = 'log-item';
+            
+            const icons = {
+                light: '💡',
+                ac: '❄️',
+                curtain: '🪟',
+                security: '🔒',
+                scene: '🎯',
+                camera: '📷',
+                motion: '⚠️'
+            };
+            
+            const now = new Date();
+            const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            log.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-icon">${icons[type] || '📝'}</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            logs.insertBefore(log, logs.firstChild);
+            
+            // Limit logs
+            while (logs.children.length > 20) {
+                logs.removeChild(logs.lastChild);
+            }
+            
+            state.logs.unshift({ time, type, message });
+        }
+
+        function clearLogs() {
+            document.getElementById('logs-list').innerHTML = '';
+            addLog('system', '日志已清空');
+        }
+
+        // ==================== Initialize ====================
+        function init() {
+            addLog('system', '系统启动完成，欢迎使用智能家居中控');
+            addLog('system', '语音助手已就绪，请说出语音命令');
+        }
+
+        init();
+
+        // Enter key for voice input
+        document.getElementById('voice-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendCommand();
+            }
+        });
+    </script>
+</body>
+</html>
